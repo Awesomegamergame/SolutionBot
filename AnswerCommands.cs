@@ -10,9 +10,9 @@ namespace DiscordBot
 {
     public sealed class AnswerCommands : ApplicationCommandModule
     {
-        [SlashCommand("answer", "Find and send a JPG image of the page containing the given problem number (e.g., 5-10).")]
+        [SlashCommand("answer", "Find and send a JPG image of the page containing the given problem number (e.g.,5-10).")]
         public async Task AnswerAsync(InteractionContext ctx,
-            [Option("problem", "Problem number, e.g., 5-10")] string problem)
+            [Option("problem", "Problem number, e.g.,5-10")] string problem)
         {
             await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
 
@@ -34,7 +34,7 @@ namespace DiscordBot
             if (normalized is null)
             {
                 await ctx.EditResponseAsync(new DiscordWebhookBuilder()
-                    .WithContent("Invalid problem format. Use something like 5-10 or 5.10."));
+                    .WithContent("Invalid problem format. Use something like5-10 or5.10."));
                 return;
             }
 
@@ -57,12 +57,17 @@ namespace DiscordBot
                 return;
             }
 
-            // Render the single page to a temp JPEG and send it
-            string? tempFile = null;
+            // Read optional tuning from environment
+            int dpi = GetEnvInt("ANSWER_DPI", 110, 50, 300);
+            int jpegQ = GetEnvInt("ANSWER_JPEG_QUALITY", 80, 30, 95);
+            int maxW = GetEnvInt("ANSWER_MAX_W", 2000, 600, 4000);
+            int maxH = GetEnvInt("ANSWER_MAX_H", 2000, 600, 4000);
+
+            string? outFile = null;
             try
             {
-                tempFile = await Task.Run(() => PdfHelpers.RenderPageToJpeg(pdfPath, pageNumber.Value, jpegQuality: 85));
-                await using var fs = File.OpenRead(tempFile);
+                outFile = await Task.Run(() => PdfHelpers.RenderPageToJpeg(pdfPath, pageNumber.Value, dpi, jpegQ, maxW, maxH));
+                await using var fs = File.OpenRead(outFile);
 
                 var webhook = new DiscordWebhookBuilder()
                     .WithContent($"Answer page for {normalized} (page {pageNumber.Value}).")
@@ -77,20 +82,33 @@ namespace DiscordBot
             }
             finally
             {
-                if (tempFile is not null && File.Exists(tempFile))
+                // Encourage GC to reclaim large arrays/buffers after image processing
+                try
                 {
-                    try { File.Delete(tempFile); } catch { /* ignore */ }
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                    GC.WaitForPendingFinalizers();
                 }
+                catch { /* ignore */ }
             }
+        }
+
+        private static int GetEnvInt(string name, int def, int min, int max)
+        {
+            var s = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(s) && int.TryParse(s, out var v))
+            {
+                if (v < min) v = min;
+                if (v > max) v = max;
+                return v;
+            }
+            return def;
         }
 
         private static string? NormalizeProblem(string input)
         {
             if (string.IsNullOrWhiteSpace(input)) return null;
             var trimmed = input.Trim();
-
-            // Accept forms like "5-10", "5.10", "  5 - 10  "
-            var m = Regex.Match(trimmed, @"^\s*(\d+)\s*[-\.]\s*(\d+)\s*$");
+            var m = Regex.Match(trimmed, "^\\s*(\\d+)\\s*[\\p{Pd}\\.]\\s*(\\d+)\\s*$");
             if (!m.Success) return null;
             return $"{m.Groups[1].Value}–{m.Groups[2].Value}";
         }
