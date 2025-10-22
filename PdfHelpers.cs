@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using PdfSharpCore.Pdf;
-using PdfSharpCore.Pdf.IO;
 using UglyToad.PdfPig;
 using Docnet.Core;
 using Docnet.Core.Models;
@@ -46,31 +44,6 @@ namespace DiscordBot
             }
 
             return null;
-        }
-
-        // Extracts a single page into a temporary PDF file and returns the path.
-        public static string ExtractSinglePage(string pdfPath, int oneBasedPageNumber)
-        {
-            if (oneBasedPageNumber < 1)
-                throw new ArgumentOutOfRangeException(nameof(oneBasedPageNumber));
-
-            using var input = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Import);
-            var pageIndex = oneBasedPageNumber - 1;
-            if (pageIndex >= input.PageCount)
-                throw new ArgumentOutOfRangeException(nameof(oneBasedPageNumber), "Page number exceeds document length.");
-
-            using var output = new PdfSharpCore.Pdf.PdfDocument
-            {
-                Version = input.Version
-            };
-            output.Info.Title = $"Extracted page {oneBasedPageNumber}";
-            output.Info.Creator = "DiscordBot";
-
-            output.AddPage(input.Pages[pageIndex]);
-
-            var temp = Path.Combine(Path.GetTempPath(), $"answer-page-{oneBasedPageNumber}-{Guid.NewGuid():N}.pdf");
-            output.Save(temp);
-            return temp;
         }
 
         // Renders a single PDF page to a temporary JPEG and returns the path.
