@@ -10,7 +10,7 @@ namespace DiscordBot
 {
     public sealed class AnswerCommands : ApplicationCommandModule
     {
-        [SlashCommand("answer", "Find and send the PDF page containing the given problem number (e.g., 5-10).")]
+        [SlashCommand("answer", "Find and send a JPG image of the page containing the given problem number (e.g., 5-10).")]
         public async Task AnswerAsync(InteractionContext ctx,
             [Option("problem", "Problem number, e.g., 5-10")] string problem)
         {
@@ -57,23 +57,23 @@ namespace DiscordBot
                 return;
             }
 
-            // Extract the single page to a temp PDF
+            // Render the single page to a temp JPEG and send it
             string? tempFile = null;
             try
             {
-                tempFile = await Task.Run(() => PdfHelpers.ExtractSinglePage(pdfPath, pageNumber.Value));
+                tempFile = await Task.Run(() => PdfHelpers.RenderPageToJpeg(pdfPath, pageNumber.Value, jpegQuality: 85));
                 await using var fs = File.OpenRead(tempFile);
 
                 var webhook = new DiscordWebhookBuilder()
                     .WithContent($"Answer page for {normalized} (page {pageNumber.Value}).")
-                    .AddFile($"answer-{normalized}.pdf", fs);
+                    .AddFile($"answer-{normalized}.jpg", fs);
 
                 await ctx.EditResponseAsync(webhook);
             }
             catch (Exception ex)
             {
                 await ctx.EditResponseAsync(new DiscordWebhookBuilder()
-                    .WithContent($"Failed to extract/send the page: {ex.Message}"));
+                    .WithContent($"Failed to render/send the page image: {ex.Message}"));
             }
             finally
             {

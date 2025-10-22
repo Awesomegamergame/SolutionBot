@@ -4,6 +4,13 @@ using System.Linq;
 using PdfSharpCore.Pdf;
 using PdfSharpCore.Pdf.IO;
 using UglyToad.PdfPig;
+using Docnet.Core;
+using Docnet.Core.Models;
+using Docnet.Core.Converters;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace DiscordBot
 {
@@ -63,6 +70,61 @@ namespace DiscordBot
 
             var temp = Path.Combine(Path.GetTempPath(), $"answer-page-{oneBasedPageNumber}-{Guid.NewGuid():N}.pdf");
             output.Save(temp);
+            return temp;
+        }
+
+        // Renders a single PDF page to a temporary JPEG and returns the path.
+        // Optionally constrain by max width/height; preserves aspect ratio.
+        public static string RenderPageToJpeg(string pdfPath, int oneBasedPageNumber, int dpi = 150, int jpegQuality = 85)
+        {
+            if (string.IsNullOrWhiteSpace(pdfPath))
+                throw new ArgumentNullException(nameof(pdfPath));
+            if (!File.Exists(pdfPath))
+                throw new FileNotFoundException("PDF not found.", pdfPath);
+            if (oneBasedPageNumber < 1)
+                throw new ArgumentOutOfRangeException(nameof(oneBasedPageNumber));
+
+            var pageIndex = oneBasedPageNumber - 1;
+
+            // Get actual page size in points (1 point = 1/72 inch)
+            double widthPoints, heightPoints;
+            using (var pdf = UglyToad.PdfPig.PdfDocument.Open(pdfPath))
+            {
+                var page = pdf.GetPage(oneBasedPageNumber);
+                widthPoints = page.Width;
+                heightPoints = page.Height;
+            }
+
+            // Convert points to pixels at desired DPI
+            int pixelWidth = (int)Math.Round(widthPoints * dpi / 72.0);
+            int pixelHeight = (int)Math.Round(heightPoints * dpi / 72.0);
+
+            using var lib = DocLib.Instance;
+            using var docReader = lib.GetDocReader(pdfPath, new PageDimensions(pixelWidth, pixelHeight));
+
+            if (pageIndex < 0 || pageIndex >= docReader.GetPageCount())
+                throw new ArgumentOutOfRangeException(nameof(oneBasedPageNumber), "Page number exceeds document length.");
+
+            using var pageReader = docReader.GetPageReader(pageIndex);
+
+            var raw = pageReader.GetImage();
+            var renderWidth = pageReader.GetPageWidth();
+            var renderHeight = pageReader.GetPageHeight();
+
+            using var image = Image.LoadPixelData<Bgra32>(raw, renderWidth, renderHeight);
+
+            // Fill transparent or black background with white
+            image.Mutate(ctx =>
+            {
+                ctx.BackgroundColor(Color.White);
+            });
+
+            var temp = Path.Combine(Path.GetTempPath(), $"answer-page-{oneBasedPageNumber}-{Guid.NewGuid():N}.jpg");
+            using (var fs = File.Create(temp))
+            {
+                image.SaveAsJpeg(fs, new JpegEncoder { Quality = jpegQuality });
+            }
+
             return temp;
         }
     }
