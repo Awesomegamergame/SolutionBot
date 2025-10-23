@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <!-- Optional: set PublishSingleFile/Trim/etc. as needed -->
+  </PropertyGroup>
+</Project>
