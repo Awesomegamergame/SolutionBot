@@ -1,0 +1,81 @@
+name: Publish Linux build on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-linux:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_NOLOGO: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+
+      - name: Restore
+        run: |
+          if test -f "./SolutionBot.sln"; then
+            dotnet restore ./SolutionBot.sln
+          else
+            dotnet restore
+          fi
+
+      - name: Publish (linux-x64)
+        run: |
+          # Publish the solution if present; otherwise publish all runnable projects.
+          if test -f "./SolutionBot.sln"; then
+            dotnet publish ./SolutionBot.sln -c Release -r linux-x64 --no-restore
+          else
+            any=false
+            for proj in $(git ls-files '*.csproj'); do
+              if grep -q '<OutputType>Exe</OutputType>' "$proj"; then
+                echo "Publishing $proj..."
+                dotnet publish "$proj" -c Release -r linux-x64 --no-restore
+                any=true
+              fi
+            done
+            if [ "$any" = false ]; then
+              echo "No runnable projects found to publish." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
+          mkdir -p dist
+          mapfile -t pubs < <(find . -type d -path '*/bin/Release/*/linux-x64/publish' | sort)
+          if [ ${#pubs[@]} -eq 0 ]; then
+            echo "No publish output folders found." >&2
+            exit 1
+          fi
+          for dir in "${pubs[@]}"; do
+            projdir="$(dirname "$(dirname "$(dirname "$(dirname "$dir")")")")"
+            projname="$(basename "$projdir")"
+            zipname="dist/${projname}-linux-x64-${TAG}.zip"
+            (cd "$dir" && zip -9 -r "${GITHUB_WORKSPACE}/${zipname}" .)
+            echo "Created ${zipname}"
+          done
+          ls -lah dist
+
+      - name: Attach assets to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
