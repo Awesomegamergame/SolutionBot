@@ -2,6 +2,13 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <!-- Optional: set PublishSingleFile/Trim/etc. as needed -->
+  </PropertyGroup>
+
+  <!-- Apply single-file by default for Release builds when an RID is specified -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release' and '$(RuntimeIdentifier)'!=''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained> <!-- set true if you want a runtime-included single file -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 </Project>
