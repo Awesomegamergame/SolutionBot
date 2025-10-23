@@ -8,7 +8,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using DSharpPlus.SlashCommands.Attributes;
 
-namespace DiscordBot
+namespace SolutionBot
 {
     public sealed class AnswerCommands : ApplicationCommandModule
     {

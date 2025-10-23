@@ -11,7 +11,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
-namespace DiscordBot
+namespace SolutionBot
 {
     internal static class PdfHelpers
     {

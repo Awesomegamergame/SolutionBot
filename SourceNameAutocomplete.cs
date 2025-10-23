@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DSharpPlus.SlashCommands;
 using DSharpPlus.Entities;
 
-namespace DiscordBot
+namespace SolutionBot
 {
     // Suggests up to 25 source names from sources.json while typing
     internal sealed class SourceNameAutocomplete : IAutocompleteProvider

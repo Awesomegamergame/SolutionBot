@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.SlashCommands;
 
-namespace DiscordBot
+namespace SolutionBot
 {
     internal static class Program
     {
