@@ -8,7 +8,7 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release' and '$(RuntimeIdentifier)'!=''">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained> <!-- set true if you want a runtime-included single file -->
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 </Project>
