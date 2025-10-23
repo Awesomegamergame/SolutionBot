@@ -69,7 +69,7 @@ jobs:
           for dir in "${pubs[@]}"; do
             projdir="$(dirname "$(dirname "$(dirname "$(dirname "$dir")")")")"
             projname="$(basename "$projdir")"
-            zipname="linux-x64-${TAG}.zip"
+            zipname="dist/linux-x64-${TAG}.zip"
             (cd "$dir" && zip -9 -r "${GITHUB_WORKSPACE}/${zipname}" .)
             echo "Created ${zipname}"
           done
@@ -78,4 +78,4 @@ jobs:
       - name: Attach assets to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: *.zip
+          files: dist/*.zip
