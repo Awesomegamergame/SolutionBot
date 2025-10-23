@@ -69,7 +69,7 @@ jobs:
           for dir in "${pubs[@]}"; do
             projdir="$(dirname "$(dirname "$(dirname "$(dirname "$dir")")")")"
             projname="$(basename "$projdir")"
-            zipname="dist/${projname}-linux-x64-${TAG}.zip"
+            zipname="linux-x64-${TAG}.zip"
             (cd "$dir" && zip -9 -r "${GITHUB_WORKSPACE}/${zipname}" .)
             echo "Created ${zipname}"
           done
