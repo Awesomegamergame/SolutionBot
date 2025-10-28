@@ -47,6 +47,10 @@ namespace SolutionBot
 
             await discord.ConnectAsync();
             Console.WriteLine("Bot connected. Press Ctrl+C to exit.");
+
+            // Start the presence updater loop (non-blocking)
+            _ = PresenceUpdater.RunAsync(discord);
+
             await Task.Delay(-1);
         }
 
