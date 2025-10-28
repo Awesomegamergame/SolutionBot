@@ -30,18 +30,21 @@ namespace SolutionBot
                 Intents = DiscordIntents.AllUnprivileged
             });
 
+            // Wire up component interactions (for schedule pagination)
+            ScheduleService.WireUp(discord);
+
             var slash = discord.UseSlashCommands();
 
             // Register to a specific guild for instant availability if provided, otherwise register globally.
             var guildIdEnv = Environment.GetEnvironmentVariable("DISCORD_GUILD_ID");
             if (ulong.TryParse(guildIdEnv, NumberStyles.None, CultureInfo.InvariantCulture, out var guildId))
             {
-                slash.RegisterCommands<AnswerCommands>(guildId);
+                slash.RegisterCommands<Commands>(guildId);
                 Console.WriteLine($"Registered slash commands to guild {guildId}.");
             }
             else
             {
-                slash.RegisterCommands<AnswerCommands>();
+                slash.RegisterCommands<Commands>();
                 Console.WriteLine("Registered slash commands globally (may take up to an hour to appear).");
             }
 
