@@ -148,6 +148,14 @@ namespace SolutionBot
             [Option("date", "Date (YYYY-MM-DD)")] string date,
             [Option("description", "Optional description of topics")] string? description = null)
         {
+            // Prevent use in direct messages
+            if (ctx.Guild is null)
+            {
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("The /schedule-add command cannot be used in direct messages. Please run this command in a server channel."));
+                return;
+            }
+
             await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
 
             if (!DateOnly.TryParseExact(date.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
@@ -198,6 +206,14 @@ namespace SolutionBot
             InteractionContext ctx,
             [Option("idOrIndex", "The id shown in /schedule, or the number from the list")] string idOrIndex)
         {
+            // Prevent use in direct messages
+            if (ctx.Guild is null)
+            {
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                    new DiscordInteractionResponseBuilder().WithContent("The /schedule-remove command cannot be used in direct messages. Please run this command in a server channel."));
+                return;
+            }
+
             await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
 
             List<ScheduleService.ScheduleItem> items;
