@@ -3,7 +3,9 @@ using DSharpPlus.Commands.Processors.SlashCommands.ArgumentModifiers;
 using DSharpPlus.Commands.Processors.SlashCommands.Metadata;
 using DSharpPlus.Entities;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -23,7 +25,6 @@ namespace SolutionBot
             [Parameter("source")]
             [SlashAutoCompleteProvider<SourceNameAutoComplete>]
             [Description("Optional source name from sources.json; defaults to the config default")] string? source = null)
-            //[Autocomplete(typeof(SourceNameAutocomplete))] string? source = null)
         {
             await ctx.DeferResponseAsync();
 
@@ -122,11 +123,12 @@ namespace SolutionBot
 
         // Schedule commands
 
-        /*[Command("schedule")]
+        [Command("schedule")]
         [Description("Show upcoming tests and quizzes.")]
         public async Task ScheduleListAsync(
             CommandContext ctx,
-            [Option("includePast", "Include past dates as well")] bool includePast = false)
+            [Parameter("includePast")]
+            [Description("Include past dates as well")] bool includePast = false)
         {
             await ctx.DeferResponseAsync();
 
@@ -149,10 +151,15 @@ namespace SolutionBot
         [Description("Add a test/quiz to the schedule.")]
         public async Task ScheduleAddAsync(
             CommandContext ctx,
-            [Option("kind", "Type of item")] [Choice("Test", "test")] [Choice("Quiz", "quiz")] string kind,
-            [Option("title", "Short title or subject")] string title,
-            [Option("date", "Date (YYYY-MM-DD)")] string date,
-            [Option("description", "Optional description of topics")] string? description = null)
+            [Parameter("kind")]
+            [Description("Type of item")]
+            [ChoiceDisplayName("Test")] [ChoiceDisplayName("Quiz")] string kind,
+            [Parameter("title")] 
+            [Description("Short title or subject")] string title,
+            [Parameter("date")]
+            [Description("Date (YYYY-MM-DD)")] string date,
+            [Parameter("description")]
+            [Description("Optional description of topics")] string? description = null)
         {
             // Prevent use in direct messages
             if (ctx.Guild is null)
@@ -277,6 +284,6 @@ namespace SolutionBot
             var kindTitle = toRemove.Kind == "quiz" ? "Quiz" : "Test";
             await ctx.EditResponseAsync(new DiscordWebhookBuilder()
                 .WithContent($"Removed [{kindTitle}] {toRemove.Date:MM/dd/yyyy} — {toRemove.Title} (id: {toRemove.Id})"));
-        }*/
+        }
     }
 }
