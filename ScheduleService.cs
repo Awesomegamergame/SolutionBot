@@ -35,9 +35,14 @@ namespace SolutionBot
             public string? Description { get; set; }
         }
 
-        public static void WireUp(DiscordClient client)
+        public static void WireUp(DiscordClientBuilder builder)
         {
-            //client.ComponentInteractionCreated += HandlePaginationAsync;
+            builder.ConfigureEventHandlers(
+                (configure) =>
+                {
+                    configure.HandleComponentInteractionCreated(HandlePaginationAsync);
+                }
+            );
         }
 
         private static async Task HandlePaginationAsync(DiscordClient sender, ComponentInteractionCreatedEventArgs e)

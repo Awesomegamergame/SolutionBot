@@ -153,7 +153,7 @@ namespace SolutionBot
             CommandContext ctx,
             [Parameter("kind")]
             [Description("Type of item")]
-            [ChoiceDisplayName("Test")] [ChoiceDisplayName("Quiz")] string kind,
+            [SlashChoiceProvider<ScheduleKindChoiceProvider>] string kind,
             [Parameter("title")] 
             [Description("Short title or subject")] string title,
             [Parameter("date")]

@@ -32,10 +32,10 @@ namespace SolutionBot
                 }
             );
 
-            var discord = builder.Build();
-
             // Wire up component interactions (for schedule pagination)
-            //ScheduleService.WireUp(discord);
+            ScheduleService.WireUp(builder);
+
+            var discord = builder.Build();
 
             Console.WriteLine("Registered slash commands globally (may take up to an hour to appear).");
 
