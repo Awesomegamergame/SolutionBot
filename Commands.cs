@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 
 namespace SolutionBot
 {
-    [InteractionAllowedContexts(DiscordInteractionContextType.BotDM, DiscordInteractionContextType.Guild)]
     public sealed class Commands
     {
         [Command("answer")]
         [Description("Find and send a JPG image of the page containing the given problem number (e.g., 5-10).")]
+        [InteractionAllowedContexts(DiscordInteractionContextType.BotDM, DiscordInteractionContextType.Guild, DiscordInteractionContextType.PrivateChannel)]
         public async Task AnswerAsync(
             CommandContext ctx,
             [Parameter("problem")] 
@@ -124,6 +124,7 @@ namespace SolutionBot
         // Schedule commands
 
         [Command("schedule")]
+        [InteractionAllowedContexts(DiscordInteractionContextType.BotDM, DiscordInteractionContextType.Guild, DiscordInteractionContextType.PrivateChannel)]
         [Description("Show upcoming tests and quizzes.")]
         public async Task ScheduleListAsync(
             CommandContext ctx,
@@ -148,6 +149,7 @@ namespace SolutionBot
         }
 
         [Command("schedule-add")]
+        [InteractionAllowedContexts(DiscordInteractionContextType.Guild)]
         [Description("Add a test/quiz to the schedule.")]
         public async Task ScheduleAddAsync(
             CommandContext ctx,
@@ -215,6 +217,7 @@ namespace SolutionBot
         }
 
         [Command("schedule-remove")]
+        [InteractionAllowedContexts(DiscordInteractionContextType.Guild)]
         [Description("Remove a scheduled item by id or list index.")]
         public async Task ScheduleRemoveAsync(
             CommandContext ctx,
