@@ -1,9 +1,8 @@
-﻿using System;
-using System.Globalization;
+﻿using DSharpPlus;
+using DSharpPlus.Commands;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.SlashCommands;
 
 namespace SolutionBot
 {
@@ -23,30 +22,22 @@ namespace SolutionBot
                 return;
             }
 
-            var discord = new DiscordClient(new DiscordConfiguration
-            {
-                Token = token,
-                TokenType = TokenType.Bot,
-                Intents = DiscordIntents.AllUnprivileged
-            });
+            // Configure the client and register the Commands extension BEFORE building the client
+            DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(token, DiscordIntents.AllUnprivileged);
+            builder.UseCommands
+            (
+                (provider, extension) =>
+                {
+                    extension.AddCommands(typeof(Commands));
+                }
+            );
 
             // Wire up component interactions (for schedule pagination)
-            ScheduleService.WireUp(discord);
+            ScheduleService.WireUp(builder);
 
-            var slash = discord.UseSlashCommands();
+            var discord = builder.Build();
 
-            // Register to a specific guild for instant availability if provided, otherwise register globally.
-            var guildIdEnv = Environment.GetEnvironmentVariable("DISCORD_GUILD_ID");
-            if (ulong.TryParse(guildIdEnv, NumberStyles.None, CultureInfo.InvariantCulture, out var guildId))
-            {
-                slash.RegisterCommands<Commands>(guildId);
-                Console.WriteLine($"Registered slash commands to guild {guildId}.");
-            }
-            else
-            {
-                slash.RegisterCommands<Commands>();
-                Console.WriteLine("Registered slash commands globally (may take up to an hour to appear).");
-            }
+            Console.WriteLine("Registered slash commands globally (may take up to an hour to appear).");
 
             await discord.ConnectAsync();
             Console.WriteLine("Bot connected. Press Ctrl+C to exit.");

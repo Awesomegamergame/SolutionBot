@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DSharpPlus.SlashCommands;
 using DSharpPlus.Entities;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Processors.SlashCommands.ArgumentModifiers;
 
 namespace SolutionBot
 {
     // Suggests up to 25 source names from sources.json while typing
-    internal sealed class SourceNameAutocomplete : IAutocompleteProvider
+    internal sealed class SourceNameAutoComplete : IAutoCompleteProvider
     {
-        public Task<IEnumerable<DiscordAutoCompleteChoice>> Provider(AutocompleteContext ctx)
+        public ValueTask<IEnumerable<DiscordAutoCompleteChoice>> AutoCompleteAsync(AutoCompleteContext context)
         {
             AnswerConfig cfg;
             try
@@ -19,10 +20,10 @@ namespace SolutionBot
             }
             catch
             {
-                return Task.FromResult(Enumerable.Empty<DiscordAutoCompleteChoice>());
+                return ValueTask.FromResult<IEnumerable<DiscordAutoCompleteChoice>>(Array.Empty<DiscordAutoCompleteChoice>());
             }
 
-            var query = ctx.FocusedOption?.Value?.ToString()?.Trim() ?? string.Empty;
+            var query = context.UserInput?.Trim() ?? string.Empty;
 
             IEnumerable<string> names = cfg.Sources.Keys;
             if (!string.IsNullOrEmpty(query))
@@ -34,7 +35,7 @@ namespace SolutionBot
                 .Take(25)
                 .Select(n => new DiscordAutoCompleteChoice(n, n));
 
-            return Task.FromResult<IEnumerable<DiscordAutoCompleteChoice>>(ordered);
+            return ValueTask.FromResult<IEnumerable<DiscordAutoCompleteChoice>>(ordered);
         }
     }
 }

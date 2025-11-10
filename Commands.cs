@@ -1,27 +1,32 @@
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.SlashCommands.ArgumentModifiers;
+using DSharpPlus.Commands.Processors.SlashCommands.Metadata;
+using DSharpPlus.Entities;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Globalization;
-using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
-using DSharpPlus.SlashCommands.Attributes;
-using System.IO;
 
 namespace SolutionBot
 {
-    public sealed class Commands : ApplicationCommandModule
+    [InteractionAllowedContexts(DiscordInteractionContextType.BotDM, DiscordInteractionContextType.Guild)]
+    public sealed class Commands
     {
-        [SlashCommand("answer", "Find and send a JPG image of the page containing the given problem number (e.g., 5-10).")]
+        [Command("answer")]
+        [Description("Find and send a JPG image of the page containing the given problem number (e.g., 5-10).")]
         public async Task AnswerAsync(
-            InteractionContext ctx,
-            [Option("problem", "Problem number, e.g., 5-10")] string problem,
-            [Option("source", "Optional source name from sources.json; defaults to the config default")]
-            [Autocomplete(typeof(SourceNameAutocomplete))] string? source = null)
+            CommandContext ctx,
+            [Parameter("problem")] 
+            [Description("Problem number, e.g., 5-10")] string problem,
+            [Parameter("source")]
+            [SlashAutoCompleteProvider<SourceNameAutoComplete>]
+            [Description("Optional source name from sources.json; defaults to the config default")] string? source = null)
         {
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
+            await ctx.DeferResponseAsync();
 
             AnswerConfig cfg;
             try
@@ -118,19 +123,21 @@ namespace SolutionBot
 
         // Schedule commands
 
-        [SlashCommand("schedule", "Show upcoming tests and quizzes.")]
+        [Command("schedule")]
+        [Description("Show upcoming tests and quizzes.")]
         public async Task ScheduleListAsync(
-            InteractionContext ctx,
-            [Option("includePast", "Include past dates as well")] bool includePast = false)
+            CommandContext ctx,
+            [Parameter("includePast")]
+            [Description("Include past dates as well")] bool includePast = false)
         {
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
+            await ctx.DeferResponseAsync();
 
             try
             {
                 var (embed, components) = await ScheduleService.BuildPageAsync(includePast, 0, ctx.User.Id);
 
                 var builder = new DiscordWebhookBuilder().AddEmbed(embed);
-                if (components.Length > 0) builder.AddComponents(components); // avoid empty-components error
+                if (components.Length > 0) builder.AddActionRowComponent(components); // avoid empty-components error
 
                 await ctx.EditResponseAsync(builder);
             }
@@ -140,23 +147,29 @@ namespace SolutionBot
             }
         }
 
-        [SlashCommand("schedule-add", "Add a test/quiz to the schedule.")]
+        [Command("schedule-add")]
+        [Description("Add a test/quiz to the schedule.")]
         public async Task ScheduleAddAsync(
-            InteractionContext ctx,
-            [Option("kind", "Type of item")] [Choice("Test", "test")] [Choice("Quiz", "quiz")] string kind,
-            [Option("title", "Short title or subject")] string title,
-            [Option("date", "Date (YYYY-MM-DD)")] string date,
-            [Option("description", "Optional description of topics")] string? description = null)
+            CommandContext ctx,
+            [Parameter("kind")]
+            [Description("Type of item")]
+            [SlashChoiceProvider<ScheduleKindChoiceProvider>] string kind,
+            [Parameter("title")] 
+            [Description("Short title or subject")] string title,
+            [Parameter("date")]
+            [Description("Date (YYYY-MM-DD)")] string date,
+            [Parameter("description")]
+            [Description("Optional description of topics")] string? description = null)
         {
             // Prevent use in direct messages
             if (ctx.Guild is null)
             {
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await ctx.FollowupAsync(
                     new DiscordInteractionResponseBuilder().WithContent("The /schedule-add command cannot be used in direct messages. Please run this command in a server channel."));
                 return;
             }
 
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
+            await ctx.DeferResponseAsync();
 
             if (!DateOnly.TryParseExact(date.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
             {
@@ -201,20 +214,22 @@ namespace SolutionBot
                 .WithContent($"Added [{kindTitle}] {item.Date:MM/dd/yyyy} — {item.Title} (id: {item.Id})"));
         }
 
-        [SlashCommand("schedule-remove", "Remove a scheduled item by id or list index.")]
+        [Command("schedule-remove")]
+        [Description("Remove a scheduled item by id or list index.")]
         public async Task ScheduleRemoveAsync(
-            InteractionContext ctx,
-            [Option("idOrIndex", "The id shown in /schedule, or the number from the list")] string idOrIndex)
+            CommandContext ctx,
+            [Parameter("idOrIndex")]
+            [Description("The id shown in /schedule, or the number from the list")] string idOrIndex)
         {
             // Prevent use in direct messages
             if (ctx.Guild is null)
             {
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                await ctx.FollowupAsync(
                     new DiscordInteractionResponseBuilder().WithContent("The /schedule-remove command cannot be used in direct messages. Please run this command in a server channel."));
                 return;
             }
 
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource);
+            await ctx.DeferResponseAsync();
 
             List<ScheduleService.ScheduleItem> items;
             try

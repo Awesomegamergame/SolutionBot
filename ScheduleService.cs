@@ -35,12 +35,17 @@ namespace SolutionBot
             public string? Description { get; set; }
         }
 
-        public static void WireUp(DiscordClient client)
+        public static void WireUp(DiscordClientBuilder builder)
         {
-            client.ComponentInteractionCreated += HandlePaginationAsync;
+            builder.ConfigureEventHandlers(
+                (configure) =>
+                {
+                    configure.HandleComponentInteractionCreated(HandlePaginationAsync);
+                }
+            );
         }
 
-        private static async Task HandlePaginationAsync(DiscordClient sender, ComponentInteractionCreateEventArgs e)
+        private static async Task HandlePaginationAsync(DiscordClient sender, ComponentInteractionCreatedEventArgs e)
         {
             var id = e.Id;
             if (string.IsNullOrWhiteSpace(id) || !id.StartsWith("schedule|", StringComparison.Ordinal))
@@ -61,7 +66,7 @@ namespace SolutionBot
                 if (e.User.Id != ownerId)
                 {
                     await e.Interaction.CreateResponseAsync(
-                        InteractionResponseType.ChannelMessageWithSource,
+                        DiscordInteractionResponseType.ChannelMessageWithSource,
                         new DiscordInteractionResponseBuilder()
                             .WithContent("Only the original requester can use these buttons.")
                             .AsEphemeral(true));
@@ -76,29 +81,29 @@ namespace SolutionBot
                 var resp = new DiscordInteractionResponseBuilder().AddEmbed(embed);
                 if (components.Length > 0)
                 {
-                    resp.AddComponents(components);
+                    resp.AddActionRowComponent(components);
                 }
                 else
                 {
                     // Replace any existing buttons with disabled nav to avoid stale interactions
-                    var disabledBack = new DiscordButtonComponent(ButtonStyle.Secondary, $"schedule|noop|0|0|{ownerId}", "Back", true);
-                    var disabledNext = new DiscordButtonComponent(ButtonStyle.Primary, $"schedule|noop|0|0|{ownerId}", "Next", true);
-                    resp.AddComponents(disabledBack, disabledNext);
+                    var disabledBack = new DiscordButtonComponent(DiscordButtonStyle.Secondary, $"schedule|noop|0|0|{ownerId}", "Back", true);
+                    var disabledNext = new DiscordButtonComponent(DiscordButtonStyle.Primary, $"schedule|noop|0|0|{ownerId}", "Next", true);
+                    resp.AddActionRowComponent(disabledBack, disabledNext);
                 }
 
-                await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, resp);
+                await e.Interaction.CreateResponseAsync(DiscordInteractionResponseType.UpdateMessage, resp);
             }
             catch (Exception ex)
             {
                 await e.Interaction.CreateResponseAsync(
-                    InteractionResponseType.ChannelMessageWithSource,
+                    DiscordInteractionResponseType.ChannelMessageWithSource,
                     new DiscordInteractionResponseBuilder()
                         .WithContent($"Failed to update schedule: {ex.Message}")
                         .AsEphemeral(true));
             }
         }
 
-        internal static async Task<(DiscordEmbed Embed, DiscordComponent[] Components)> BuildPageAsync(bool includePast, int pageIndex, ulong userId)
+        internal static async Task<(DiscordEmbed Embed, DiscordButtonComponent[] Components)> BuildPageAsync(bool includePast, int pageIndex, ulong userId)
         {
             var items = await LoadAsync();
 
@@ -120,7 +125,7 @@ namespace SolutionBot
                     .Build();
 
                 // Return no components; callers handle not adding components (or replacing with disabled)
-                return (emptyEmbed, Array.Empty<DiscordComponent>());
+                return (emptyEmbed, Array.Empty<DiscordButtonComponent>());
             }
 
             var totalPages = (int)Math.Ceiling(total / (double)PageSize);
@@ -160,10 +165,10 @@ namespace SolutionBot
             var backId = $"schedule|back|{(includePast ? "1" : "0")}|{pageIndex}|{userId}";
             var nextId = $"schedule|next|{(includePast ? "1" : "0")}|{pageIndex}|{userId}";
 
-            var backBtn = new DiscordButtonComponent(ButtonStyle.Secondary, backId, "Back", isFirst);
-            var nextBtn = new DiscordButtonComponent(ButtonStyle.Primary, nextId, "Next", isLast);
+            var backBtn = new DiscordButtonComponent(DiscordButtonStyle.Secondary, backId, "Back", isFirst);
+            var nextBtn = new DiscordButtonComponent(DiscordButtonStyle.Primary, nextId, "Next", isLast);
 
-            return (embedBuilder.Build(), new DiscordComponent[] { backBtn, nextBtn });
+            return (embedBuilder.Build(), new DiscordButtonComponent[] { backBtn, nextBtn });
         }
 
         internal static async Task<List<ScheduleItem>> LoadAsync()
