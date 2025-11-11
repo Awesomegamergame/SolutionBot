@@ -64,15 +64,15 @@ namespace SolutionBot
                 return;
             }
 
-            // Prefer cache if present
-            var cachedPath = CacheService.GetCachedImagePath(sourceName, normalized);
+            // Prefer cache (PDF-file-name based), with fallback to legacy source-name cache
+            var cachedPath = CacheService.GetCachedImagePathForPdf(pdfPath, normalized, legacySourceName: sourceName);
             if (File.Exists(cachedPath))
             {
                 try
                 {
                     await using var cfs = File.OpenRead(cachedPath);
 
-                    var srcSlug = CacheService.Slugify(sourceName);
+                    var srcSlug = Path.GetFileNameWithoutExtension(pdfPath) ?? CacheService.Slugify(sourceName);
                     var webhook = new DiscordWebhookBuilder()
                         .WithContent($"Answer page for {normalized} from '{sourceName}' (cached).")
                         .AddFile($"answer-{normalized}-{srcSlug}.jpg", cfs);

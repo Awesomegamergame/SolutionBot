@@ -21,16 +21,41 @@ namespace SolutionBot
             return string.IsNullOrWhiteSpace(s) ? "source" : s;
         }
 
+        // Old (source name–based) directory (kept for backward compatibility / fallback)
         public static string GetSourceCacheDir(string sourceName)
         {
             var slug = Slugify(sourceName);
             return Path.Combine(GetBaseCacheDir(), slug);
         }
 
+        // New: derive cache folder from PDF file name (without extension)
+        public static string GetPdfCacheDir(string pdfPath)
+        {
+            var file = Path.GetFileNameWithoutExtension(pdfPath) ?? "pdf";
+            var slug = Slugify(file);
+            return Path.Combine(GetBaseCacheDir(), slug);
+        }
+
+        // Old API (source name) retained
         public static string GetCachedImagePath(string sourceName, string normalizedProblem)
         {
             var dir = GetSourceCacheDir(sourceName);
             return Path.Combine(dir, $"{normalizedProblem}.jpg");
+        }
+
+        // New helper: build path from the PDF itself (preferred going forward).
+        // Falls back to legacy source-name cache if the new-style file is missing.
+        public static string GetCachedImagePathForPdf(string pdfPath, string normalizedProblem, string? legacySourceName = null)
+        {
+            var dir = GetPdfCacheDir(pdfPath);
+            var modern = Path.Combine(dir, $"{normalizedProblem}.jpg");
+
+            if (File.Exists(modern) || string.IsNullOrWhiteSpace(legacySourceName))
+                return modern;
+
+            // Fallback to legacy source folder if file not found in new layout.
+            var legacy = GetCachedImagePath(legacySourceName, normalizedProblem);
+            return File.Exists(legacy) ? legacy : modern;
         }
 
         public static async Task BuildAllAsync(bool force = false, string? onlySource = null, int dpi = 110, int jpegQuality = 80, int maxW = 2000, int maxH = 2000)
@@ -77,7 +102,8 @@ namespace SolutionBot
                     continue;
                 }
 
-                var outDir = GetSourceCacheDir(sourceName);
+                // NEW: use PDF file name for folder, not the logical source name.
+                var outDir = GetPdfCacheDir(pdfPath);
                 Directory.CreateDirectory(outDir);
 
                 int done = 0, skipped = 0, total = index.Count;
@@ -103,7 +129,7 @@ namespace SolutionBot
                     }
                 }
 
-                Console.WriteLine($"[done] '{sourceName}': rendered {done}/{total} problems (skipped {skipped}).");
+                Console.WriteLine($"[done] '{sourceName}': rendered {done}/{total} problems (skipped {skipped}). Folder='{outDir}'");
             }
         }
 

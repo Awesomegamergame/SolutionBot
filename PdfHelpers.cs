@@ -9,6 +9,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
+using System.Text.RegularExpressions;
 
 namespace SolutionBot
 {
@@ -19,6 +20,7 @@ namespace SolutionBot
 
         // Find the first page number (1-based) that contains the given problem marker.
         // Tries variants: "5-10", "5.10", "5–10", "Problem 5–10", etc.
+        // NEW: Skip pages where the problem only appears in the abbreviated form "Prob. 5–10" (i.e. not the actual problem heading).
         public static int? FindFirstMatchingPage(string pdfPath, string normalizedProblem)
         {
             if (!File.Exists(pdfPath))
@@ -33,7 +35,17 @@ namespace SolutionBot
                 $"Problem {normalizedProblem}",
                 $"Problem {enDashVariant}",
                 $"Problem {normalizedProblem.Replace('-', '.')}"
+
             };
+
+            // Extract chapter/problem numbers if in the form "<ch>-<pr>"
+            string? chapter = null, prob = null;
+            var parts = normalizedProblem.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                chapter = parts[0];
+                prob = parts[1];
+            }
 
             using var doc = PdfDocument.Open(pdfPath);
             foreach (var page in doc.GetPages())
