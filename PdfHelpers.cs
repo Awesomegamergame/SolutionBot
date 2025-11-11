@@ -8,6 +8,7 @@ using Docnet.Core.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace SolutionBot
 {
@@ -48,9 +49,9 @@ namespace SolutionBot
         }
 
         // Simplified rendering: render the page at a fixed DPI (default 300) with high JPEG quality.
-        // No clamping, no background mutation, no manual pixel math.
+        // Adds optional white background flattening (default: true) so transparent regions become white.
         // Returns path to a temporary JPEG file.
-        public static string RenderPageToJpeg(string pdfPath, int oneBasedPageNumber, int dpi = 300, int jpegQuality = 95)
+        public static string RenderPageToJpeg(string pdfPath, int oneBasedPageNumber, int dpi = 300, int jpegQuality = 95, bool forceWhiteBackground = true)
         {
             if (string.IsNullOrWhiteSpace(pdfPath))
                 throw new ArgumentNullException(nameof(pdfPath));
@@ -88,6 +89,49 @@ namespace SolutionBot
                 var renderHeight = pageReader.GetPageHeight();
 
                 using var image = Image.LoadPixelData<Bgra32>(raw, renderWidth, renderHeight);
+
+                // Flatten transparency against white if requested.
+                if (forceWhiteBackground)
+                {
+                    if (image.DangerousTryGetSinglePixelMemory(out var memory))
+                    {
+                        var span = memory.Span;
+                        for (int i = 0; i < span.Length; i++)
+                        {
+                            var p = span[i];
+                            byte a = p.A;
+                            if (a == 255)
+                                continue;
+                            if (a == 0)
+                            {
+                                // Fully transparent -> pure white
+                                span[i] = new Bgra32(255, 255, 255, 255);
+                            }
+                            else
+                            {
+                                // Alpha blend over white: out = src * a + white * (1 - a)
+                                // For white background the formula simplifies:
+                                // c' = (c*a + 255*(255-a)) / 255
+                                byte r = (byte)((p.R * a + 255 * (255 - a)) / 255);
+                                byte g = (byte)((p.G * a + 255 * (255 - a)) / 255);
+                                byte b = (byte)((p.B * a + 255 * (255 - a)) / 255);
+                                span[i] = new Bgra32(b, g, r, 255);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Fallback (rare): create a new white canvas and draw original.
+                        var flattened = new Image<Bgra32>(image.Width, image.Height, new Bgra32(255, 255, 255, 255));
+                        flattened.Mutate(ctx => ctx.DrawImage(image, 1f));
+                        image.Dispose();
+                        // Replace reference (cannot reassign using because of scope, so just save flattened).
+                        var tempFallback = Path.Combine(Path.GetTempPath(), $"answer-page-{oneBasedPageNumber}-{Guid.NewGuid():N}.jpg");
+                        using var fsFallback = File.Create(tempFallback);
+                        flattened.SaveAsJpeg(fsFallback, new JpegEncoder { Quality = jpegQuality });
+                        return tempFallback;
+                    }
+                }
 
                 var temp = Path.Combine(Path.GetTempPath(), $"answer-page-{oneBasedPageNumber}-{Guid.NewGuid():N}.jpg");
                 using (var fs = File.Create(temp))
