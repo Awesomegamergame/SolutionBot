@@ -2,6 +2,7 @@
 using DSharpPlus.Commands;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SolutionBot
@@ -11,6 +12,23 @@ namespace SolutionBot
         // Entry point
         private static async Task Main(string[] args)
         {
+            // Cache build mode
+            if (IsBuildCacheRequested(args))
+            {
+                try
+                {
+                    var (onlySource, force) = ParseCacheArgs(args);
+                    await CacheService.BuildAllAsync(force: force, onlySource: onlySource);
+                    Console.WriteLine("Cache build complete.");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Cache build failed: {ex.Message}");
+                    Environment.ExitCode = 1;
+                }
+                return;
+            }
+
             var token = Environment.GetEnvironmentVariable("DISCORD_TOKEN");
             if (string.IsNullOrWhiteSpace(token))
                 token = ReadTokenFromFile();
@@ -42,6 +60,39 @@ namespace SolutionBot
             await discord.ConnectAsync();
             Console.WriteLine("Bot connected. Press Ctrl+C to exit.");
             await Task.Delay(-1);
+        }
+
+        private static bool IsBuildCacheRequested(string[] args)
+        {
+            if (args is null || args.Length == 0) return false;
+            return args.Any(a =>
+                a.Equals("cache", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("--build-cache", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("-c", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static (string? onlySource, bool force) ParseCacheArgs(string[] args)
+        {
+            string? onlySource = null;
+            bool force = args.Any(a => a.Equals("--force", StringComparison.OrdinalIgnoreCase));
+
+            // --source "<name>" or --source=<name>
+            for (int i = 0; i < args.Length; i++)
+            {
+                var a = args[i];
+                if (a.StartsWith("--source=", StringComparison.OrdinalIgnoreCase))
+                {
+                    onlySource = a.Substring("--source=".Length).Trim().Trim('"');
+                    break;
+                }
+                if (a.Equals("--source", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    onlySource = args[i + 1].Trim().Trim('"');
+                    break;
+                }
+            }
+
+            return (onlySource, force);
         }
 
         private static string? ReadTokenFromFile()
