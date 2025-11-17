@@ -12,7 +12,8 @@ namespace SolutionBot
         private static readonly IReadOnlyList<DiscordApplicationCommandOptionChoice> Choices =
         [
             new DiscordApplicationCommandOptionChoice("Test", "test"),
-            new DiscordApplicationCommandOptionChoice("Quiz", "quiz")
+            new DiscordApplicationCommandOptionChoice("Quiz", "quiz"),
+            new DiscordApplicationCommandOptionChoice("Mastering", "mastering")
         ];
 
         public ValueTask<IEnumerable<DiscordApplicationCommandOptionChoice>> ProvideAsync(CommandParameter parameter) =>

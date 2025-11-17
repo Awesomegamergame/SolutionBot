@@ -149,7 +149,7 @@ namespace SolutionBot
 
         [Command("schedule")]
         [InteractionAllowedContexts(DiscordInteractionContextType.BotDM, DiscordInteractionContextType.Guild, DiscordInteractionContextType.PrivateChannel)]
-        [Description("Show upcoming tests and quizzes.")]
+        [Description("Show upcoming tests, quizzes, and mastering items.")]
         public async Task ScheduleListAsync(
             CommandContext ctx,
             [Parameter("includePast")]
@@ -174,7 +174,7 @@ namespace SolutionBot
 
         [Command("schedule-add")]
         [InteractionAllowedContexts(DiscordInteractionContextType.Guild)]
-        [Description("Add a test/quiz to the schedule.")]
+        [Description("Add a test/quiz/mastering item to the schedule.")]
         public async Task ScheduleAddAsync(
             CommandContext ctx,
             [Parameter("kind")]
@@ -214,10 +214,18 @@ namespace SolutionBot
                 return;
             }
 
+            var kindNormalized = kind?.Trim().ToLowerInvariant();
+            var storedKind = kindNormalized switch
+            {
+                "quiz" => "quiz",
+                "mastering" => "mastering",
+                _ => "test"
+            };
+
             var item = new ScheduleService.ScheduleItem
             {
                 Id = ScheduleService.NewId(),
-                Kind = (kind?.Trim().ToLowerInvariant() == "quiz") ? "quiz" : "test",
+                Kind = storedKind,
                 Title = title?.Trim() ?? "",
                 Date = d,
                 Description = string.IsNullOrWhiteSpace(description) ? null : description!.Trim()
@@ -235,7 +243,13 @@ namespace SolutionBot
                 return;
             }
 
-            var kindTitle = item.Kind == "quiz" ? "Quiz" : "Test";
+            var kindTitle = item.Kind switch
+            {
+                "quiz" => "Quiz",
+                "mastering" => "Mastering",
+                _ => "Test"
+            };
+
             await ctx.EditResponseAsync(new DiscordWebhookBuilder()
                 .WithContent($"Added [{kindTitle}] {item.Date:MM/dd/yyyy} — {item.Title} (id: {item.Id})"));
         }
@@ -308,7 +322,12 @@ namespace SolutionBot
                 return;
             }
 
-            var kindTitle = toRemove.Kind == "quiz" ? "Quiz" : "Test";
+            var kindTitle = toRemove.Kind switch
+            {
+                "quiz" => "Quiz",
+                "mastering" => "Mastering",
+                _ => "Test"
+            };
             await ctx.EditResponseAsync(new DiscordWebhookBuilder()
                 .WithContent($"Removed [{kindTitle}] {toRemove.Date:MM/dd/yyyy} — {toRemove.Title} (id: {toRemove.Id})"));
         }
