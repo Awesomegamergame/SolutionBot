@@ -65,7 +65,7 @@ namespace SolutionBot
             }
 
             // Prefer cache (PDF-file-name based), with fallback to legacy source-name cache
-            var cachedPath = CacheService.GetCachedImagePathForPdf(pdfPath, normalized, legacySourceName: sourceName);
+            var cachedPath = CacheService.GetCachedImagePath(pdfPath, normalized);
             if (File.Exists(cachedPath))
             {
                 try

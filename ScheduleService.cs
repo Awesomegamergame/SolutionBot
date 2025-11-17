@@ -146,10 +146,17 @@ namespace SolutionBot
                 var it = page[i];
                 var absoluteIndex = start + i + 1;
                 var dateStr = it.Date.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture);
-                var kind = it.Kind.Equals("quiz", StringComparison.OrdinalIgnoreCase) ? "Quiz" : "Test";
+
+                var kind = it.Kind switch
+                {
+                    "quiz" => "Quiz",
+                    "mastering" => "Mastering",
+                    _ => "Test"
+                };
+
                 var title = string.IsNullOrWhiteSpace(it.Title) ? "(no title)" : it.Title.Trim();
 
-                var fieldName = $"{absoluteIndex}. {dateStr} — {kind}: {Truncate(title, 110)}";
+                var fieldName = $"{absoluteIndex}. {dateStr} – {kind}: {Truncate(title, 110)}";
                 if (fieldName.Length > 256) fieldName = Truncate(fieldName, 256);
 
                 var value = string.IsNullOrWhiteSpace(it.Description)
