@@ -64,6 +64,30 @@ namespace SolutionBot
                 return;
             }
 
+            // Prefer cache (PDF-file-name based), with fallback to legacy source-name cache
+            var cachedPath = CacheService.GetCachedImagePathForPdf(pdfPath, normalized, legacySourceName: sourceName);
+            if (File.Exists(cachedPath))
+            {
+                try
+                {
+                    await using var cfs = File.OpenRead(cachedPath);
+
+                    var srcSlug = Path.GetFileNameWithoutExtension(pdfPath) ?? CacheService.Slugify(sourceName);
+                    var webhook = new DiscordWebhookBuilder()
+                        .WithContent($"Answer page for {normalized} from '{sourceName}' (cached).")
+                        .AddFile($"answer-{normalized}-{srcSlug}.jpg", cfs);
+
+                    await ctx.EditResponseAsync(webhook);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    await ctx.EditResponseAsync(new DiscordWebhookBuilder()
+                        .WithContent($"Failed to send cached image: {ex.Message}"));
+                    return;
+                }
+            }
+
             int? pageNumber;
             try
             {
@@ -88,7 +112,7 @@ namespace SolutionBot
                 var outFile = await Task.Run(() => PdfHelpers.RenderPageToJpeg(pdfPath, pageNumber.Value));
                 await using var fs = File.OpenRead(outFile);
 
-                var srcSlug = string.Concat(sourceName.Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')).Trim('_');
+                var srcSlug = CacheService.Slugify(sourceName);
 
                 var webhook = new DiscordWebhookBuilder()
                     .WithContent($"Answer page for {normalized} (page {pageNumber.Value}) from '{sourceName}'.")
@@ -118,7 +142,7 @@ namespace SolutionBot
             var trimmed = input.Trim();
             var m = Regex.Match(trimmed, "^\\s*(\\d+)\\s*[\\p{Pd}\\.]\\s*(\\d+)\\s*$");
             if (!m.Success) return null;
-            return $"{m.Groups[1].Value}–{m.Groups[2].Value}";
+            return $"{m.Groups[1].Value}-{m.Groups[2].Value}";
         }
 
         // Schedule commands
